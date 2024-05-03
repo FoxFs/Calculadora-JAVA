@@ -2,6 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Stack;
 
 /* tela */
 
@@ -13,6 +14,7 @@ public class GUI extends JFrame {
         JPanel painel = new JPanel();
         painel.setLayout(new BorderLayout());
 
+        
         campoTexto = new JTextField();
         campoTexto.setEditable(false); 
         painel.add(campoTexto, BorderLayout.NORTH);
@@ -27,7 +29,7 @@ public class GUI extends JFrame {
             "7", "8", "9", "x",
             "4", "5", "6", "-",
             "1", "2", "3", "+",
-            "0", ".",
+            "0", ".", "/",
         };
 
         for (String TextoBt : bt){
@@ -54,22 +56,102 @@ public class GUI extends JFrame {
         botaoIgual.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 String expressao = campoTexto.getText();
-
                 try{
-                    double resultado = eval(expressao);
+                    double resultado = calcularExpressao(expressao);
                     campoTexto.setText(Double.toString(resultado));
+                    
 
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(null, "Erro ao calcular o resultado.");
+                }
+            }
+            
+            public static double calcularExpressao(String expressao) {
+                //remover espaço vazio
+                expressao = expressao.replaceAll("\\s+", "");
+                
+                Stack<Double> numeros = new Stack<>();
+                Stack<Character> operadores = new Stack<>();
+                
+                for (int i = 0; i < expressao.length(); i++) {
+                    char c = expressao.charAt(i);
+                    if (Character.isDigit(c)) {
+                        //extrair numero da expressao
+                        StringBuilder numero = new StringBuilder();
+                        numero.append(c);
+                        while (i + 1 < expressao.length() && Character.isDigit(expressao.charAt(i + 1))) {
+                            numero.append(expressao.charAt(++i));
+                        }
+                        numeros.push(Double.parseDouble(numero.toString()));
+                    } else if (isOperador(c)) {
+                        //jogar o operador pro grupo dos operadores
+                        while (!operadores.isEmpty() && precedencia(operadores.peek()) >= precedencia(c)) {
+                            calcularOperacao(numeros, operadores);
+                        }
+                        operadores.push(c);
+                    }
+                }
+                
+                while (!operadores.isEmpty()) {
+                    calcularOperacao(numeros, operadores);
+                }
+                
+                return numeros.pop();
+            }
+            
+            private static boolean isOperador(char c) {
+                return c == '+' || c == '-' || c == 'x' || c == '/';
+            }
+            
+            private static int precedencia(char operador) {
+                if (operador == 'x' || operador == '/') {
+                    return 2;
+                } else if (operador == '+' || operador == '-') {
+                    return 1;
+                } else {
+                    return 0;
+                }
+            }
+            
+            private static void calcularOperacao(Stack<Double> numeros, Stack<Character> operadores) {
+                double b = numeros.pop();
+                double a = numeros.pop();
+                char operador = operadores.pop();
+                switch (operador) {
+                    case '+':
+                        numeros.push(a + b);
+                        break;
+                    case '-':
+                        numeros.push(a - b);
+                        break;
+                    case 'x':
+                        numeros.push(a * b);
+                        break;
+                    case '/':
+                        numeros.push(a / b);
+                        break;
                 }
             }
         });
 
         painelBotaoIgual.add(botaoIgual);
 
-        // Adiciona o painel com o botão "=" ao painel principal na região SUL (SOUTH)
-        painel.add(painelBotaoIgual, BorderLayout.SOUTH);
+        //adiciona o painel com o botão "=" ao painel principal na região SUL (SOUTH)
+        painel.add(painelBotaoIgual, BorderLayout.AFTER_LAST_LINE);
 
+        //adiciona botao delete na caculadora
+        JPanel PainelBotaoDeletar = new JPanel();
+        JButton BotaoDeletar = new JButton("Del");
+        BotaoDeletar.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                campoTexto.setText("");
+            }
+        });
+
+        //adiciona botao ao painel
+        PainelBotaoDeletar.add(BotaoDeletar);
+
+        painel.add(PainelBotaoDeletar, BorderLayout.AFTER_LINE_ENDS);
 
         //ADD O PAINEL COM AS INFORMACÕES
         getContentPane().add(painel);
@@ -80,45 +162,9 @@ public class GUI extends JFrame {
         setVisible(true);
     }
 
-   // Método para avaliar uma expressão matemática simples (sem parênteses)
-    
-    private double eval(String expressao) {
-    System.out.println("Expressão: " + expressao); // Depuração: Imprime a expressão
-    String[] partes = expressao.split(" ");
-    double resultado = Double.parseDouble(partes[0]);
-    System.out.println("Primeiro número: " + resultado); // Depuração: Imprime o primeiro número
-    for (int i = 1; i < partes.length; i += 2) {
-        String operador = partes[i];
-        double numero = Double.parseDouble(partes[i + 1]);
-        System.out.println("Operador: " + operador); // Depuração: Imprime o operador
-        System.out.println("Próximo número: " + numero); // Depuração: Imprime o próximo número
-        switch (operador) {
-            case "+":
-                resultado += numero;
-                break;
-            case "-":
-                resultado -= numero;
-                break;
-            case "*":
-                resultado *= numero;
-                break;
-            case "/":
-                if (numero != 0) { // Verifica divisão por zero
-                    resultado /= numero;
-                } else {
-                    throw new ArithmeticException("Divisão por zero!"); // Lança exceção
-                }
-                break;
-        }
-        System.out.println("Resultado parcial: " + resultado); // Depuração: Imprime o resultado parcial
-    }
-    return resultado;
-}
-
-
-
-    /* base do codigo */
+    // base do codigo
     public static void main(String[] args){
         SwingUtilities.invokeLater(() -> new GUI());
     }
 }
+
